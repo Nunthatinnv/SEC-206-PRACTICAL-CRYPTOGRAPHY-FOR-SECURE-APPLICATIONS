@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import List
 
-from Crypto.Hash import SHA1
+from Crypto.Hash import SHA256
 
 BLOCK_SIZE = 16
 
@@ -19,17 +19,16 @@ def chunk_bytes(data: bytes, block_size: int = BLOCK_SIZE) -> List[bytes]:
 def compute_integrity_fingerprint(data: bytes) -> str:
     blocks = chunk_bytes(data, BLOCK_SIZE)
 
-    h = SHA1.new()
+    h = SHA256.new()
     for block in blocks:
-        h = SHA1.new(str(block).encode("utf-8"))
-        h.digest()
+        h.update(block)
 
-    return h.digest()
+    return h.hexdigest()
 
 # TODO: Modify this function
 def verify_integrity(data: bytes, expected_hex: str) -> bool:
     actual = compute_integrity_fingerprint(data)
-    return actual == expected_hex
+    return actual == expected_hex.strip()
 
 if __name__ == "__main__":
     # Assume we downloaded this fingerprint from the file author.
@@ -50,5 +49,5 @@ if __name__ == "__main__":
     tampered_file_a_fp = compute_integrity_fingerprint(tampered_file_a)
     print("Computed fingerprint (tampered):", tampered_file_a_fp)
 
-    print("Fingerprint verification (tampered):", verify_integrity(tampered_file_a_fp, true_fp))
+    print("Fingerprint verification (tampered):", verify_integrity(tampered_file_a, true_fp))
 
