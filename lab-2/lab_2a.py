@@ -106,6 +106,9 @@ def build_rainbow_table_sha256(passwords: Iterable[str]) -> Dict[str, str]:
     table: Dict[str, str] = {}
 
     # TODO: implement
+    for password in passwords:
+        hash_hex = sha256_hex(password.encode('utf-8'))
+        table[hash_hex] = password
 
     return table
 
@@ -117,7 +120,7 @@ def crack_sha256_hash(target_hash_hex: str, table: Dict[str, str]) -> str | None
     else return None.
     """
     # TODO: implement
-
+    return table.get(target_hash_hex)
 
 def build_rainbow_table_argon2id_fixed_salt(passwords: Iterable[str]) -> Dict[bytes, str]:
     """
@@ -136,6 +139,10 @@ def build_rainbow_table_argon2id_fixed_salt(passwords: Iterable[str]) -> Dict[by
     table: Dict[bytes, str] = {}
 
     # TODO: implement
+
+    for password in passwords:
+        hash_bytes = argon2id_raw(password, ARGON2_FIXED_SALT)
+        table[hash_bytes] = password
 
     return table
 

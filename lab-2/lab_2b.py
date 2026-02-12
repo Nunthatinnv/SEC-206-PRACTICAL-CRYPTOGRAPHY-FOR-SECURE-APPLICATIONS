@@ -116,6 +116,9 @@ def build_user_db_argon2id(passwords: Iterable[str]) -> Dict[str, PasswordRecord
         username = f"username{i}"
         # TODO: implement
         # Hint: use os.urandom(SALT_LEN) to generate salt
+        salt = os.urandom(SALT_LEN)
+        pwd_hash = argon2id_raw(pw, salt)
+        db[username] = PasswordRecord(salt=salt, pwd_hash=pwd_hash)
 
     return db
 
@@ -143,6 +146,12 @@ def verify_login(username: str, password: str, db: Dict[str, PasswordRecord]) ->
     # TODO: implement
     # Hint: you can compare hashes with
     #       hmac.compare_digest(candidate_hash, record.pwd_hash)
+    if username not in db:
+        return False
+    
+    record = db[username]
+    candidate_hash = argon2id_raw(password, record.salt)
+    return hmac.compare_digest(candidate_hash, record.pwd_hash)
 
 def main() -> None:
     if not os.path.exists(PASSWORD_LIST_PATH):
