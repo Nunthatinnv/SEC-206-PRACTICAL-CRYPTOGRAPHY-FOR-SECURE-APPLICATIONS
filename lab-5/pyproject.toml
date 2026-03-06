@@ -1,0 +1,9 @@
+[project]
+name = "lab-5"
+version = "0.1.0"
+description = "Lab 5: ECDHE + ECDSA + ECIES secure channel"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pycryptodome>=3.23.0",
+]
