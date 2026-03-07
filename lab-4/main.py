@@ -63,7 +63,9 @@ def ecdhe_shared_secret(my_priv: ECC.EccKey, peer_pub: ECC.EccKey) -> bytes:
       For kdf, we will use  kdf=lambda z: z and derive the two-way keys manually for the purpose
       of this exercise.
     """
-    raise NotImplementedError
+    # raise NotImplementedError
+
+    return key_agreement(static_priv=my_priv, static_pub=peer_pub, kdf=lambda z: z)
 
 
 # ============================================================
@@ -77,7 +79,9 @@ def derive_two_way_keys(Z: bytes, salt: bytes, ctx: bytes) -> tuple[bytes, bytes
         - one key for Bob   -> Alice
       The two keys must be different and reproducible on both sides.
     """
-    raise NotImplementedError
+    # raise NotImplementedError
+
+    return HKDF(master=Z, key_len=KEY_LEN, salt=salt, context=ctx, num_keys=2, hashmod=SHA256)
 
 
 # =========================
