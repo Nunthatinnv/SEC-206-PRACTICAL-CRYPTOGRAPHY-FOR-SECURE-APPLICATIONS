@@ -79,7 +79,19 @@ def aead_encrypt_row(key: bytes, row_index: int, version: int, plaintext: bytes)
       - Feed the associated data into the cipher (so it is authenticated).
       - Encrypt the plaintext and obtain both ciphertext and authentication tag.
     """
-    raise NotImplementedError
+    # raise NotImplementedError
+
+    nonce = get_random_bytes(12)
+    ad = _encode_ad(row_index, version)
+    cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+    cipher.update(ad)
+    ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+
+    return RowBlob(
+        nonce=nonce,
+        ciphertext=ciphertext,
+        tag=tag
+    )
 
 
 def aead_decrypt_row(key: bytes, row_index: int, version: int, blob: RowBlob) -> bytes:
@@ -99,7 +111,16 @@ def aead_decrypt_row(key: bytes, row_index: int, version: int, blob: RowBlob) ->
       - Feed the same associated data.
       - Decrypt and verify using (ciphertext, tag).
     """
-    raise NotImplementedError
+    # raise NotImplementedError
+
+    ad = _encode_ad(row_index, version)
+    cipher = AES.new(key, AES.MODE_GCM, nonce=blob.nonce)
+    cipher.update(ad)
+    try:
+        plaintext = cipher.decrypt_and_verify(blob.ciphertext, blob.tag)
+    except ValueError:
+        raise ValueError("bad tag (secure)")
+    return plaintext
 
 
 class EncryptedVector:

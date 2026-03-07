@@ -87,7 +87,14 @@ def secure_encrypt_then_mac(enc_key: bytes, mac_key: bytes, plaintext: bytes) ->
     Return:
       Packet(nonce, ciphertext, tag)
     """
-    raise NotImplementedError
+    
+    # raise NotImplementedError
+
+    nonce = get_random_bytes(16)
+    ciphertext = AES.new(enc_key, AES.MODE_ECB).encrypt(pad(plaintext, AES.block_size))
+    tag = HMAC.new(mac_key, nonce + ciphertext, SHA256).digest()
+
+    return Packet(nonce, ciphertext, tag)
 
 
 def secure_verify_and_decrypt(enc_key: bytes, mac_key: bytes, pkt: Packet) -> bytes:
@@ -99,7 +106,15 @@ def secure_verify_and_decrypt(enc_key: bytes, mac_key: bytes, pkt: Packet) -> by
       2) If verification fails, raise ValueError.
       3) Decrypt ciphertext using AES and return plaintext.
     """
-    raise NotImplementedError
+    # raise NotImplementedError
+
+    try:
+        HMAC.new(mac_key, pkt.nonce + pkt.ciphertext, SHA256).verify(pkt.tag)
+    except ValueError:
+        raise ValueError("bad tag (secure)")
+
+    plaintext = AES.new(enc_key, AES.MODE_ECB).decrypt(pkt.ciphertext)
+    return unpad(plaintext, AES.block_size)
 
 
 # ============================================================
@@ -129,6 +144,7 @@ def main() -> None:
         pkt2.ciphertext[:-1] + bytes([pkt2.ciphertext[-1] ^ 1]),
         pkt2.tag,
     )
+    print("\n== Tampered ==")
     try:
         secure_verify_and_decrypt(enc_key, mac_key, bad)
         raise AssertionError("expected failure on modified ciphertext")
