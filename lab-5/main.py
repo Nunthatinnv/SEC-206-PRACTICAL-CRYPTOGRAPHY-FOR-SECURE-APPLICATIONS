@@ -21,6 +21,7 @@ from Crypto.Protocol.DH import key_agreement
 from Crypto.Protocol.KDF import HKDF
 from Crypto.PublicKey import ECC
 from Crypto.Random import get_random_bytes
+from Crypto.Signature import DSS
 
 CURVE = "p256"
 KEY_LEN = 32
@@ -127,7 +128,12 @@ def sign_handshake_transcript(signing_priv: ECC.EccKey, transcript: bytes) -> by
       - Crypto.Hash.SHA256
       - Crypto.Signature.DSS
     """
-    raise NotImplementedError
+    # raise NotImplementedError
+
+    hash = SHA256.new(transcript)
+    signer = DSS.new(signing_priv, 'fips-186-3')
+    signature = signer.sign(hash)
+    return signature
 
 
 def verify_handshake_signature(
@@ -139,7 +145,14 @@ def verify_handshake_signature(
       - Return None if valid.
       - Raise ValueError if invalid.
     """
-    raise NotImplementedError
+    # raise NotImplementedError
+
+    hash = SHA256.new(transcript)
+    verifier = DSS.new(signing_pub, 'fips-186-3')
+    try:
+        verifier.verify(hash, signature)
+    except ValueError:
+        raise ValueError("Invalid signature")
 
 
 def demo_secure_channel() -> None:
