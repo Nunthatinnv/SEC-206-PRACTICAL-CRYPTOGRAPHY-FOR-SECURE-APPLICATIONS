@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chat</title>
+  <style>
+    body { font-family: sans-serif; max-width: 880px; margin: 1.5rem auto; padding: 0 1rem; }
+    .meta { color: #555; margin-bottom: 0.75rem; }
+    .error { color: #b00020; margin-bottom: 0.7rem; }
+    .log { border: 1px solid #bbb; border-radius: 8px; padding: 0.75rem; min-height: 280px; }
+    .msg { margin: 0.4rem 0; }
+    .out { color: #0b5394; }
+    .in { color: #38761d; }
+    form.send { margin-top: 0.8rem; display: flex; gap: 0.5rem; }
+    input[name="body"] { flex: 1; padding: 0.5rem; }
+    .top-actions { margin-bottom: 0.8rem; display: flex; gap: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Simple Chat</h1>
+  <p class="meta">
+    Logged in as <b>{{ username }}</b>, chatting with <b>{{ peer }}</b>.
+  </p>
+
+  <div class="top-actions">
+    <form method="post" action="/logout"><button type="submit">Log out</button></form>
+    <form method="get" action="/chat"><button type="submit">Refresh</button></form>
+    <form method="get" action="/debug"><button type="submit">Debug</button></form>
+  </div>
+
+  {% if chat_error %}
+    <div class="error">{{ chat_error }}</div>
+  {% endif %}
+
+  <div class="log">
+    {% for m in logs %}
+      <div class="msg {{ 'out' if m.direction == 'out' else 'in' }}">
+        [{{ m.ts|hhmmss }}] <b>{{ 'You' if m.direction == 'out' else peer }}</b>: {{ m.body }}
+      </div>
+    {% else %}
+      <div>No messages yet.</div>
+    {% endfor %}
+  </div>
+
+  <form class="send" method="post" action="/chat/send">
+    <input name="body" placeholder="Type a message" autocomplete="off" required />
+    <button type="submit">Send</button>
+  </form>
+
+</body>
+</html>

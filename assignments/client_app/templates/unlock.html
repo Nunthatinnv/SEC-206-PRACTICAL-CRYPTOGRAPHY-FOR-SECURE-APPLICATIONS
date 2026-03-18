@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Unlock Local DB</title>
+  <style>
+    body { font-family: sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+    .card { border: 1px solid #bbb; border-radius: 8px; padding: 1rem; }
+    .row { margin: 0.5rem 0; }
+    label { display: block; margin-bottom: 0.2rem; }
+    input { width: 100%; padding: 0.5rem; }
+    .error { color: #b00020; }
+    .hint { color: #555; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <h1>Unlock Local Database</h1>
+  <p class="hint">User: <b>{{ username }}</b></p>
+  <div class="card">
+    <p class="hint">This password is used to decrypt messages stored in the local database.</p>
+    <p class="hint">Password default: <code>{{ default_db_password }}</code></p>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <form method="post" action="/unlock">
+      <div class="row">
+        <label for="db_password">Local DB Password</label>
+        <input id="db_password" type="password" name="db_password" value="{{ default_db_password }}" autocomplete="off" required />
+      </div>
+      <button type="submit">Unlock</button>
+    </form>
+  </div>
+</body>
+</html>
