@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Client Login</title>
+  <style>
+    body { font-family: sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+    .card { border: 1px solid #bbb; border-radius: 8px; padding: 1rem; }
+    .row { margin: 0.5rem 0; }
+    label { display: block; margin-bottom: 0.2rem; }
+    input { width: 100%; padding: 0.5rem; }
+    .error { color: #b00020; }
+    .hint { color: #555; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <h1>Client Login</h1>
+  <p class="hint">Default login credentials: <code>{{ fixed_username }}</code> / <code>{{ fixed_password }}</code></p>
+  <div class="card">
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <form method="post" action="/login">
+      <div class="row">
+        <label for="username">Username</label>
+        <input id="username" name="username" value="{{ fixed_username }}" required />
+      </div>
+      <div class="row">
+        <label for="password">Password</label>
+        <input id="password" type="password" name="password" value="{{ fixed_password }}" required />
+      </div>
+      <button type="submit">Log in</button>
+    </form>
+  </div>
+</body>
+</html>

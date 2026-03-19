@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Server Debug</title>
+  <style>
+    body { font-family: sans-serif; max-width: 1100px; margin: 0 auto; padding: 0.75rem 1rem; min-height: 100vh; overflow-y: auto; }
+    .meta { color: #555; margin: 0.2rem 0; }
+    .actions { margin: 0.4rem 0; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .stack { display: grid; gap: 0.75rem; }
+    .card { border: 1px solid #bbb; border-radius: 8px; padding: 0.75rem; min-height: 0; display: flex; flex-direction: column; }
+    .card h2 { margin: 0 0 0.35rem 0; font-size: 1rem; }
+    .scroll { min-height: 0; max-height: 260px; overflow: auto; }
+    .card-a3-sessions .scroll { max-height: 520px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; table-layout: fixed; }
+    th, td { border: 1px solid #ddd; padding: 0.4rem; vertical-align: top; text-align: left; overflow-wrap: anywhere; word-break: break-word; }
+    thead th { background: #f0f0f0; position: sticky; top: 0; z-index: 1; }
+    code { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+    .empty { color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Server Debug</h1>
+  <p class="meta">DB <code>{{ db_path }}</code></p>
+
+  <div class="actions">
+    <form method="get" action="/debug"><button type="submit">Refresh</button></form>
+    <form method="get" action="/api/health"><button type="submit">Health JSON</button></form>
+  </div>
+
+  <div class="stack">
+    <div class="card card-a1-users">
+      <h2>A1: Authentication Database (`users` table)</h2>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:18%;">id</th>
+              <th style="width:57%;">password_hash</th>
+              <th style="width:25%;">created_ts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in users %}
+              <tr>
+                <td>{{ r.username }}</td>
+                <td><code>{{ r.password_hash }}</code></td>
+                <td>{{ r.created_ts }}</td>
+              </tr>
+            {% else %}
+              <tr><td class="empty" colspan="3">No rows</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card card-a2-key-meta">
+      <h2>A2: Raw Server Database (`server_key_meta` table)</h2>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:18%;">id</th>
+              <th style="width:12%;">version</th>
+              <th style="width:16%;">kdf</th>
+              <th style="width:20%;">salt_b64</th>
+              <th style="width:10%;">key_version</th>
+              <th style="width:12%;">created_ts</th>
+              <th style="width:12%;">updated_ts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in server_key_meta %}
+              <tr>
+                <td>{{ r.id }}</td>
+                <td>{{ r.version }}</td>
+                <td>{{ r.kdf }}</td>
+                <td><code>{{ r.salt_b64 }}</code></td>
+                <td>{{ r.key_version }}</td>
+                <td>{{ r.created_ts }}</td>
+                <td>{{ r.updated_ts }}</td>
+              </tr>
+            {% else %}
+              <tr><td class="empty" colspan="7">No rows</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card card-a2-inbox">
+      <h2>A2: Raw Server Database (`inbox` table)</h2>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:7%;">id</th>
+              <th style="width:12%;">recipient</th>
+              <th style="width:12%;">sender</th>
+              <th style="width:36%;">body</th>
+              <th style="width:18%;">msg_id</th>
+              <th style="width:15%;">ts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in inbox %}
+              <tr>
+                <td>{{ r.id }}</td>
+                <td>{{ r.recipient }}</td>
+                <td>{{ r.sender }}</td>
+                <td>{{ r.body }}</td>
+                <td><code>{{ r.msg_id }}</code></td>
+                <td>{{ r.ts }}</td>
+              </tr>
+            {% else %}
+              <tr><td class="empty" colspan="6">No rows</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card card-a3-sessions">
+      <h2>A3: Channel State (`channel_sessions` table)</h2>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:12%;">session_id_b64</th>
+              <th style="width:9%;">k_c2s_b64</th>
+              <th style="width:9%;">k_s2c_b64</th>
+              <th style="width:7%;">next_c2s</th>
+              <th style="width:7%;">next_s2c</th>
+              <th style="width:10%;">expires_at</th>
+              <th style="width:23%;">client_hello_json</th>
+              <th style="width:23%;">server_hello_json</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in channel_sessions %}
+              <tr>
+                <td><code>{{ r.session_id_b64 }}</code></td>
+                <td><code>{{ r.k_c2s_b64 }}</code></td>
+                <td><code>{{ r.k_s2c_b64 }}</code></td>
+                <td>{{ r.next_c2s_counter }}</td>
+                <td>{{ r.next_s2c_counter }}</td>
+                <td>{{ r.expires_at }}</td>
+                <td><code>{{ r.client_hello_json }}</code></td>
+                <td><code>{{ r.server_hello_json }}</code></td>
+              </tr>
+            {% else %}
+              <tr><td class="empty" colspan="8">No rows</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card card-a3-bindings">
+      <h2>A3: User to Channel Binding (`user_channel_bindings` table)</h2>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:48%;">session_id_b64</th>
+              <th style="width:28%;">username</th>
+              <th style="width:24%;">bound_ts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in user_channel_bindings %}
+              <tr>
+                <td><code>{{ r.session_id_b64 }}</code></td>
+                <td>{{ r.username }}</td>
+                <td>{{ r.bound_ts }}</td>
+              </tr>
+            {% else %}
+              <tr><td class="empty" colspan="3">No rows</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
