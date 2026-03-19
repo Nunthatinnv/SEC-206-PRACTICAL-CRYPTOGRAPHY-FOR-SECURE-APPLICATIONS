@@ -24,6 +24,7 @@ class ServerStorage:
                 CREATE TABLE IF NOT EXISTS users (
                   username TEXT PRIMARY KEY,
                   password_hash TEXT NOT NULL,
+                  salt BLOB NOT NULL,
                   created_ts INTEGER NOT NULL
                 )
                 """
@@ -122,25 +123,27 @@ class ServerStorage:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_user_channel_bindings_username ON user_channel_bindings(username)")
 
     # Users
-    def upsert_user(self, username: str, password_hash: str) -> None:
+    def upsert_user(self, username: str, password_hash: str, salt: bytes) -> None:
         with self._db() as conn:
             conn.execute(
                 """
-                INSERT INTO users(username, password_hash, created_ts)
-                VALUES (?, ?, ?)
+                INSERT INTO users(username, password_hash, salt, created_ts)
+                VALUES (?, ?, ?, ?)
                 ON CONFLICT(username) DO UPDATE SET
-                  password_hash=excluded.password_hash
+                  password_hash=excluded.password_hash,
+                  salt=excluded.salt
                 """,
-                (username, password_hash, int(time.time())),
+                (username, password_hash, salt, int(time.time())),
             )
 
-    def get_password_hash(self, username: str) -> str | None:
+    def get_password_hash_and_salt(self, username: str) -> tuple[str | None, bytes | None]:
         with self._db() as conn:
-            row = conn.execute("SELECT password_hash FROM users WHERE username=?", (username,)).fetchone()
-        return None if row is None else str(row["password_hash"])
+            row = conn.execute("SELECT password_hash, salt FROM users WHERE username=?", (username,)).fetchone()
+        return None if row is None else (str(row["password_hash"]), row["salt"])
 
     def user_exists(self, username: str) -> bool:
-        return self.get_password_hash(username) is not None
+        stored_hash, _ = self.get_password_hash_and_salt(username)
+        return stored_hash is not None
 
     # Inbox relay
     def enqueue_message(self, sender: str, recipient: str, body: str, msg_id: str) -> None:
@@ -262,7 +265,7 @@ class ServerStorage:
     def raw_users(self) -> list[dict]:
         with self._db() as conn:
             rows = conn.execute(
-                "SELECT username, password_hash, created_ts FROM users ORDER BY username ASC"
+                "SELECT username, password_hash, salt, created_ts FROM users ORDER BY username ASC"
             ).fetchall()
         return [dict(r) for r in rows]
 

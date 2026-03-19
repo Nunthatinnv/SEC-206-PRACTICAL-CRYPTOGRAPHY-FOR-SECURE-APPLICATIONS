@@ -21,18 +21,18 @@ class AuthService:
         for username, password in self.FIXED_USERS.items():
             # TODO [A1]: replace plaintext storage in seed_default_users() with
             # hash_password(...).
-            _ = hash_password
-            self.storage.upsert_user(username, password)
+            password_hash, salt = hash_password(password)
+            self.storage.upsert_user(username, password_hash, salt)
 
     def login(self, username: str, password: str) -> str | None:
-        stored = self.storage.get_password_hash(username)
-        if stored is None:
+        stored_hash, salt = self.storage.get_password_hash_and_salt(username)
+        if stored_hash is None:
             return None
 
         # TODO [A1]: replace the direct equality check in login() with
         # verify_password(...).
-        _ = verify_password
-        if password != stored:
+
+        if not verify_password(password, stored_hash, salt):
             return None
 
         token = secrets.token_urlsafe(24)
