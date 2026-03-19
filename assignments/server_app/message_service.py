@@ -38,8 +38,12 @@ class MessageService:
         # then pass that aad_obj into StorageCipher.encrypt_body(body, aad_obj).
         # The goal is to stop ciphertext for one inbox row from verifying as if it
         # belonged to a different sender, recipient, or message identity.
-        _ = (to, username, msg_id)
-        envelope = cipher.encrypt_body(body)
+        aad_obj = {
+            "to": to,
+            "sender": username,
+            "msg_id": msg_id
+        }
+        envelope = cipher.encrypt_body(body, aad_obj)
         stored_body = json.dumps(envelope, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
         self.storage.enqueue_message(sender=username, recipient=to, body=stored_body, msg_id=msg_id)
         return {"ok": True, "stored": True, "msg_id": msg_id}
@@ -54,10 +58,14 @@ class MessageService:
             body_text = str(m.get("body") or "")
             # TODO [A2]: define the same aad_obj for decrypt and pass it into
             # StorageCipher.decrypt_body(env, aad_obj) so tampering or row swaps fail closed.
-            _ = (username, sender, msg_id)
+            aad_obj = {
+                "to": username,     # The person pulling the message is the recipient
+                "sender": sender,
+                "msg_id": msg_id
+            }
             try:
                 env = json.loads(body_text)
-                body = cipher.decrypt_body(env)
+                body = cipher.decrypt_body(env, aad_obj)
             except Exception as e:
                 raise ValueError(f"inbox_decrypt_failed:{e}") from e
             out_msgs.append(

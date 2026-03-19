@@ -7,6 +7,10 @@ import secrets
 from dataclasses import dataclass
 from typing import Any
 
+from .passwords import argon2id_raw
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+
 
 def _b64e(raw: bytes) -> str:
     return base64.b64encode(raw).decode("ascii")
@@ -32,8 +36,13 @@ def create_key_meta() -> dict[str, Any]:
     # In this scaffold, key_version stays fixed at 1.
     return {
         "version": "a2/v1",
-        "kdf": "insecure-sha256",
-        "kdf_params": {"note": "insecure"},
+        "kdf": "argon2id",
+        "kdf_params": {
+            "t": 3,
+            "m": 65536,
+            "p": 1,
+            "output_len": 32
+            },
         "salt_b64": _b64e(secrets.token_bytes(16)),
         "key_version": 1,
     }
@@ -49,7 +58,8 @@ class StorageCipher:
         # secure password KDF, then return a StorageCipher that holds that derived key.
         # The same password + same metadata must produce the same key every time.
         salt_b64 = str(key_meta.get("salt_b64") or "")
-        raw = hashlib.sha256((password + "|" + salt_b64).encode("utf-8")).digest()
+        kdf_params = key_meta.get("kdf_params", {})
+        raw = argon2id_raw(password, _b64d(salt_b64), kdf_params)
         return cls(key_b64=_b64e(raw))
 
     @classmethod
@@ -65,15 +75,23 @@ class StorageCipher:
         # caller-provided aad_obj itself.
         # In the real implementation, aad_obj should be serialized deterministically on both
         # encryption and decryption before it is supplied to the AEAD API.
-        _ = _serialize_aad(aad_obj)
+        
+        enc_key = _b64d(self.key_b64)
+        ad = _serialize_aad(aad_obj)
+        nonce = get_random_bytes(12)
+
+        cipher = AES.new(enc_key, AES.MODE_GCM, nonce=nonce)
+        cipher.update(ad)
+        ciphertext, tag = cipher.encrypt_and_digest(plaintext.encode("utf-8"))
+
         return {
             "version": "a2/v1",
-            "alg": "insecure-b64",
+            "alg": "aes-256-gcm",
             "key_version": 1,
-            "nonce_b64": "",
-            "ct_b64": _b64e(plaintext.encode("utf-8")),
-            "tag_b64": "",
-            "aad": aad_obj or {},
+            "nonce_b64": _b64e(cipher.nonce),
+            "ct_b64": _b64e(ciphertext),
+            "tag_b64": _b64e(tag),
+            "aad": aad_obj,
         }
 
     def decrypt_body(self, envelope: dict[str, Any], aad_obj: dict[str, Any] | None = None) -> str:
@@ -81,5 +99,19 @@ class StorageCipher:
         # Reconstruct and authenticate the caller-provided aad_obj instead of trusting
         # envelope["aad"] as the source of truth.
         # Fail closed on wrong key, tampering, malformed input, or mismatched AAD.
-        _ = (self.key_b64, _serialize_aad(aad_obj))
-        return _b64d(str(envelope.get("ct_b64", ""))).decode("utf-8")
+        
+        enc_key = _b64d(self.key_b64)
+        ad = _serialize_aad(aad_obj)
+        
+        nonce = _b64d(str(envelope.get("nonce_b64", "")))
+        ciphertext = _b64d(str(envelope.get("ct_b64", "")))
+        tag = _b64d(str(envelope.get("tag_b64", "")))
+
+        cipher = AES.new(enc_key, AES.MODE_GCM, nonce=nonce)
+        cipher.update(ad)
+        try:
+            plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+        except ValueError:
+            raise ValueError("bad key, tampered ciphertext, or mismatched AAD")
+        
+        return plaintext.decode("utf-8")

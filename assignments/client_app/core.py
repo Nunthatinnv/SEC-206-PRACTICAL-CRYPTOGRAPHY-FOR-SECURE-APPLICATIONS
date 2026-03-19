@@ -36,16 +36,24 @@ class ClientCore:
         # then pass that aad_obj into StorageCipher.encrypt_body(body, aad_obj).
         # The goal is to stop ciphertext for one stored message row from verifying
         # as if it belonged to a different local row.
-        _ = (direction, peer, msg_id)
-        env = StorageCipher.from_derived_key(key_b64).encrypt_body(body)
+        aad_obj = {
+            "direction": direction,
+            "peer": peer,
+            "msg_id": msg_id
+        }
+        env = StorageCipher.from_derived_key(key_b64).encrypt_body(body, aad_obj)
         return json.dumps(env, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
 
     def _decrypt_local_body(self, key_b64: str, direction: str, peer: str, msg_id: str, body_text: str) -> str:
         env = json.loads(body_text)
         # TODO [A2]: define the same aad_obj for decrypt and pass it into
         # StorageCipher.decrypt_body(env, aad_obj) so tampering or row swaps fail closed.
-        _ = (direction, peer, msg_id)
-        return StorageCipher.from_derived_key(key_b64).decrypt_body(env)
+        aad_obj = {
+            "direction": direction,
+            "peer": peer,
+            "msg_id": msg_id
+        }
+        return StorageCipher.from_derived_key(key_b64).decrypt_body(env, aad_obj)
 
     def send_message(
         self, token: str, sender: str, recipient: str, body: str, channel: ChannelSession, key_b64: str
